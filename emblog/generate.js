@@ -111,21 +111,39 @@ md.renderer.rules.fence = (tokens, idx, options, env, self) => {
 };
 
 // Custom renderer for images to include figcaption
-md.renderer.rules.image = (tokens, idx, options, env, self) => {
+md.renderer.rules.image = async (tokens, idx, options, env, self) => {
     const token = tokens[idx];
-    const src = token.attrs[token.attrIndex("src")][1];
+    let src = token.attrs[token.attrIndex("src")][1];
     const alt = token.content || ""; // Use alt as caption
     const title = token.attrs[token.attrIndex("title")]
         ? token.attrs[token.attrIndex("title")][1]
         : "";
+    let wh = "";
+
+    if (src.startsWith("/static/")) {
+        const imagePath = src.startsWith("/static/img")
+            ? path.join("dist", src)
+            : path.join(decodeURIComponent(src.replace("/static/", "post/")));
+
+        try {
+            const metadata = await sharp(imagePath).metadata();
+            if (metadata.width && metadata.height) {
+                wh = `width="${metadata.width}" height="${metadata.height}"`;
+            }
+        } catch (error) {
+            console.error("Error getting image metadata:", error);
+        }
+    }
+
     // Returning a figure with img and figcaption
     return `
         <figure>
-            <img src="${src}" alt="${alt}" title="${title}">
+            <img src="${src}" alt="${alt}" title="${title}" ${wh}>
             ${alt ? "<figcaption>" + alt + "</figcaption>" : ""}
         </figure>
     `;
 };
+
 
 function renderPartials(htmlContent) {
     if (!htmlContent) {
@@ -278,8 +296,9 @@ async function processPosts() {
                     continue;
                 }
                 markdownContent = markdownContent.replace(
-                    /!\[(.*?)\]\((?!\/|http)(.*?)\)/g,
-                    `![$1](/static/${encodeURIComponent(postID)}/$2)`
+                    /!\[(.*?)\]\((?!https?:\/\/|\/)(.*?)\)/g,
+                    (_, altText, url) =>
+                        `![${altText}](/static/${encodeURIComponent(postID)}/${url})`
                 );
                 let htmlContent = md.render(
                     renderPartials(
