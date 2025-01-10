@@ -1,8 +1,9 @@
-const fs = require("fs");
-const path = require("path");
-const markdownIt = require("markdown-it");
-const hljs = require("highlight.js");
-const sharp = require("sharp");
+import fs from "node:fs";
+import path from "node:path";
+import markdownIt from "markdown-it";
+import hljs from "highlight.js";
+import sharp from "sharp";
+
 const skipPost = process.env.SKIPPOST || 0;
 const cache = process.env.CACHE || false;
 let analyze = {

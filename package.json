@@ -7,6 +7,7 @@
         "start": "node emblog/server.js",
         "dev": "CACHE=true SKIPPOST=true node emblog/server.js"
     },
+    "type": "module",
     "dependencies": {
         "highlight.js": "^11.10.0",
         "markdown-it": "^14.1.0",

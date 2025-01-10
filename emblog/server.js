@@ -1,10 +1,10 @@
-const http = require("http");
-const fs = require("fs");
-const path = require("path");
-const { exec } = require("child_process");
+import http from "node:http";
+import fs from "node:fs";
+import path from "node:path";
+import { exec } from "node:child_process";
 
 // Set the directory to serve files from (e.g., 'dist')
-const baseDirectory = path.join(__dirname, "..", "dist");
+const baseDirectory = new URL("../dist", import.meta.url).pathname;
 
 const server = http.createServer((req, res) => {
     try {
@@ -85,7 +85,7 @@ var generating = false;
 
 // Watch the 'dist' directory for changes and run 'generate.js' when a change is detected
 fs.watch(
-    path.join(__dirname, ".."),
+    new URL("../", import.meta.url),
     { recursive: true },
     (eventType, filename) => {
         if (
