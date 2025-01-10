@@ -189,6 +189,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/highlight.js@npm:^10.1.0":
+  version: 10.1.0
+  resolution: "@types/highlight.js@npm:10.1.0"
+  dependencies:
+    highlight.js: "npm:*"
+  checksum: 10c0/bffb2c7a625117dd6082197f0999855ce368552159d0b098ef3af02da3cdd7a758f551802329ee2bbdde2ec0af5a997f40fc670af20a5387efe4c5b95a41d444
+  languageName: node
+  linkType: hard
+
 "argparse@npm:^2.0.1":
   version: 2.0.1
   resolution: "argparse@npm:2.0.1"
@@ -304,11 +313,13 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "emtech@workspace:."
   dependencies:
+    "@types/highlight.js": "npm:^10.1.0"
     autocorrect-node: "npm:^2.13.0"
     highlight.js: "npm:^11.10.0"
     markdown-it: "npm:^14.1.0"
     prettier: "npm:^3.4.2"
     sharp: "npm:^0.33.5"
+    typescript: "npm:^5.7.3"
   languageName: unknown
   linkType: soft
 
@@ -316,6 +327,13 @@ __metadata:
   version: 4.5.0
   resolution: "entities@npm:4.5.0"
   checksum: 10c0/5b039739f7621f5d1ad996715e53d964035f75ad3b9a4d38c6b3804bb226e282ffeae2443624d8fdd9c47d8e926ae9ac009c54671243f0c3294c26af7cc85250
+  languageName: node
+  linkType: hard
+
+"highlight.js@npm:*":
+  version: 11.11.1
+  resolution: "highlight.js@npm:11.11.1"
+  checksum: 10c0/40f53ac19dac079891fcefd5bd8a21cf2e8931fd47da5bd1dca73b7e4375c1defed0636fc39120c639b9c44119b7d110f7f0c15aa899557a5a1c8910f3c0144c
   languageName: node
   linkType: hard
 
@@ -472,6 +490,26 @@ __metadata:
   version: 2.8.1
   resolution: "tslib@npm:2.8.1"
   checksum: 10c0/9c4759110a19c53f992d9aae23aac5ced636e99887b51b9e61def52611732872ff7668757d4e4c61f19691e36f4da981cd9485e869b4a7408d689f6bf1f14e62
+  languageName: node
+  linkType: hard
+
+"typescript@npm:^5.7.3":
+  version: 5.7.3
+  resolution: "typescript@npm:5.7.3"
+  bin:
+    tsc: bin/tsc
+    tsserver: bin/tsserver
+  checksum: 10c0/b7580d716cf1824736cc6e628ab4cd8b51877408ba2be0869d2866da35ef8366dd6ae9eb9d0851470a39be17cbd61df1126f9e211d8799d764ea7431d5435afa
+  languageName: node
+  linkType: hard
+
+"typescript@patch:typescript@npm%3A^5.7.3#optional!builtin<compat/typescript>":
+  version: 5.7.3
+  resolution: "typescript@patch:typescript@npm%3A5.7.3#optional!builtin<compat/typescript>::version=5.7.3&hash=b45daf"
+  bin:
+    tsc: bin/tsc
+    tsserver: bin/tsserver
+  checksum: 10c0/3b56d6afa03d9f6172d0b9cdb10e6b1efc9abc1608efd7a3d2f38773d5d8cfb9bbc68dfb72f0a7de5e8db04fc847f4e4baeddcd5ad9c9feda072234f0d788896
   languageName: node
   linkType: hard
 
