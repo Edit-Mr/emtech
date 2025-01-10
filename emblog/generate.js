@@ -1,4 +1,4 @@
-const fs = require("fs");
+const fs = require("fs").promises;
 const path = require("path");
 const markdownIt = require("markdown-it");
 const hljs = require("highlight.js");
@@ -12,7 +12,10 @@ let analyze = {
     categories: 0
 };
 let postsMeta = [];
-// Updated Markdown-it setup with new highlight.js API
+let tags = {};
+const categories = {};
+const partialsContent = {};
+let imageMeta = {};
 
 const md = markdownIt({
     html: true,
@@ -44,8 +47,8 @@ const md = markdownIt({
 });
 
 // Function to create anchor-friendly IDs from text
-function slugify(text) {
-    return text
+const slugify = (text) =>
+    text
         .toString()
         .trim()
         .replace(/\s+/g, "-") // Replace spaces with hyphens
@@ -54,22 +57,14 @@ function slugify(text) {
             ""
         ) // Remove all non-word characters except hyphens/underscores
         .replace(/\-\-+/g, "-"); // Replace multiple hyphens with a single one
-}
 
 // Custom renderer for headings to include anchor IDs
 md.renderer.rules.heading_open = (tokens, idx, options, env, self) => {
     const token = tokens[idx];
     const level = token.tag.slice(1); // Get the heading level (h1, h2, etc.)
-
-    if (level == 2) {
-        // Only for h2 tags
-        const title = tokens[idx + 1].content; // Get the heading text content
-        const slug = slugify(title); // Generate slug based on the text content
-
-        // Add an id attribute for anchors
-        token.attrPush(["id", slug]);
-    }
-
+    const title = tokens[idx + 1].content; // Get the heading text content
+    const slug = slugify(title); // Generate slug based on the text content
+    token.attrPush(["id", slug]);
     return self.renderToken(tokens, idx, options);
 };
 
@@ -118,24 +113,7 @@ md.renderer.rules.image = async (tokens, idx, options, env, self) => {
     const title = token.attrs[token.attrIndex("title")]
         ? token.attrs[token.attrIndex("title")][1]
         : "";
-    let wh = "";
-
-    if (src.startsWith("/static/")) {
-        const imagePath = src.startsWith("/static/img")
-            ? path.join("dist", src)
-            : path.join(decodeURIComponent(src.replace("/static/", "post/")));
-
-        try {
-            const metadata = await sharp(imagePath).metadata();
-            if (metadata.width && metadata.height) {
-                wh = `width="${metadata.width}" height="${metadata.height}"`;
-            }
-        } catch (error) {
-            console.error("Error getting image metadata:", error);
-        }
-    }
-
-    // Returning a figure with img and figcaption
+    let wh = imageMeta[src] || "";
     return `
         <figure>
             <img src="${src}" alt="${alt}" title="${title}" ${wh}>
@@ -144,111 +122,121 @@ md.renderer.rules.image = async (tokens, idx, options, env, self) => {
     `;
 };
 
-
-function renderPartials(htmlContent) {
-    if (!htmlContent) {
-        throw new Error("htmlContent is undefined or null");
+const initDist = async () => {
+    if (!cache) {
+        if (fs.existsSync("dist")) {
+            fs.rmSync("dist", { recursive: true });
+        }
     }
-    const partialsKeys = Object.keys(partialsContent);
-    partialsKeys.forEach((partialKey) => {
-        htmlContent = htmlContent.replace(
-            new RegExp(`{{${partialKey}}}`, "g"),
-            partialsContent[partialKey]
-        );
-    });
-    return htmlContent;
-}
-
-// a json object to store the partials content
-const partialsContent = {};
-
-// read all the partials and store them in the partialsContent object
-
-const generatePartials = () => {
-    const partials = fs
-        .readdirSync("view/partials")
-        .filter((file) => file.endsWith(".html"))
-        .map((file) => file.replace(".html", ""));
-    partials.forEach((partial) => {
-        console.log(`➤ Reading partial: ${partial}`);
-        const partialContent = fs.readFileSync(
-            `view/partials/${partial}.html`,
-            "utf8"
-        );
-        partialsContent[partial] = partialContent;
-    });
-
-    // render partial in partialsContent
-    while (partials.length) {
-        partials.forEach((partial) => {
-            const rendered = renderPartials(partialsContent[partial]);
-            if (rendered !== partialsContent[partial]) {
-                partialsContent[partial] = rendered;
-            } else {
-                partials.splice(partials.indexOf(partial), 1);
-            }
-        });
-    }
+    await Promise.all(
+        [
+            "dist/static",
+            "dist/p/clean",
+            "dist/p/meta",
+            "dist/meta/tag",
+            "dist/meta/category"
+        ].map((path) => fs.mkdir(path, { recursive: true }))
+    );
 };
-// 清空並建立 dist 資料夾
-function initDist() {
-    if (!cache && fs.existsSync("dist")) {
-        fs.rmSync("dist", { recursive: true });
-    }
-    if (!fs.existsSync("dist")) {
-        fs.mkdirSync("dist");
-    }
-    if (!fs.existsSync("dist/static")) {
-        fs.mkdirSync("dist/static");
-    }
-    if (!fs.existsSync("dist/p")) {
-        fs.mkdirSync("dist/p");
-    }
-    if (!fs.existsSync("dist/p/clean")) {
-        fs.mkdirSync("dist/p/clean");
-    }
-    if (!fs.existsSync("dist/p/meta")) {
-        fs.mkdirSync("dist/p/meta", { recursive: true });
-    }
-    if (!fs.existsSync("dist/meta/tag")) {
-        fs.mkdirSync("dist/meta/tag", { recursive: true });
-    }
-    if (!fs.existsSync("dist/meta/category")) {
-        fs.mkdirSync("dist/meta/category", { recursive: true });
-    }
-}
-
-// 複製靜態資源
-function copyStatic() {
-    fs.cpSync("static", "dist/static", { recursive: true });
-    fs.cpSync("public", "dist", { recursive: true });
-    const viewFiles = fs
-        .readdirSync("view/pages")
-        .filter((file) => file.endsWith(".html"));
-    console.log("➤ Found view files: ", viewFiles);
-    viewFiles.forEach((file) => {
-        const dirName = path.basename(file, ".html");
-        fs.mkdirSync(`dist/${dirName}`, { recursive: true });
-
-        // 讀取檔案內容
-        let fileContent = fs.readFileSync(`view/pages/${file}`, "utf8");
-        fileContent = renderPartials(fileContent);
-        fs.writeFileSync(`dist/${dirName}/index.html`, fileContent);
-    });
-    analyze.pages = viewFiles.length;
-    fs.copyFileSync("dist/home/index.html", "dist/index.html");
-    fs.rmSync("dist/home", { recursive: true });
-    fs.copyFileSync("dist/post/index.html", "dist/p/index.html");
-    fs.rmSync("dist/post", { recursive: true });
-    fs.copyFileSync("dist/404/index.html", "dist/404.html");
-    fs.rmSync("dist/404", { recursive: true });
-}
 
 const replacePlaceholders = (template, replacements) =>
     Object.keys(replacements).reduce(
         (str, key) => str.replaceAll(`{{${key}}}`, replacements[key]),
         template
     );
+
+const renderPartials = (htmlContent) => {
+    if (!htmlContent) throw new Error("htmlContent is undefined or null");
+    const partialsKeys = Object.keys(partialsContent);
+    const regex = new RegExp(
+        `{{(${partialsKeys.join("|")})}}`, // 把所有 partials 進行匹配
+        "g"
+    );
+    return htmlContent.replace(regex, (match, partialKey) => {
+        return partialsContent[partialKey] || match; // 如果部分模板存在，替換，否則保持原樣
+    });
+};
+
+const generatePartials = async () => {
+    const partialFiles = fs
+        .readdirSync("view/partials")
+        .filter((file) => file.endsWith(".html"));
+    await Promise.all(
+        partialFiles.map(async (file) => {
+            const partialName = file.replace(".html", "");
+            console.log(`➤ Reading partial: ${partialName}`);
+            const content = await fs.readFile(`view/partials/${file}`, "utf8");
+            partialsContent[partialName] = content;
+        })
+    );
+    let partialsToRender = new Set(Object.keys(partialsContent));
+    while (partialsToRender.size)
+        for (const partial of [...partialsToRender]) {
+            const rendered = renderPartials(partialsContent[partial]);
+            if (rendered !== partialsContent[partial])
+                partialsContent[partial] = rendered;
+            else partialsToRender.delete(partial);
+        }
+};
+
+const copyStatic = async () => {
+    const viewFiles = fs
+        .readdirSync("view/pages")
+        .filter((file) => file.endsWith(".html"));
+    console.log("➤ Found view files: ", viewFiles);
+
+    const filePromises = viewFiles.map(async (file) => {
+        const dirName = path.basename(file, ".html");
+        const dirPath = `dist/${dirName}`;
+        await fs.mkdir(dirPath, { recursive: true });
+        let fileContent = await fs.readFile(`view/pages/${file}`, "utf8");
+        fileContent = renderPartials(fileContent);
+        await fs.writeFile(`${dirPath}/index.html`, fileContent);
+    });
+
+    await Promise.all(filePromises);
+
+    analyze.pages = viewFiles.length;
+
+    const copyFilteredFiles = async () => {
+        const sourceDir = "post";
+        const targetDir = "dist/static";
+        const files = await fs.readdir(sourceDir);
+        const filteredFiles = files.filter((file) => file !== "index.md");
+        const copyPromises = filteredFiles.map(async (file) => {
+            const sourcePath = path.join(sourceDir, file);
+            const targetPath = path.join(targetDir, file);
+            await fs.copyFile(sourcePath, targetPath);
+        });
+
+        await Promise.all(copyPromises);
+
+        // copy and analyze images
+        const imageFiles = fs
+            .readdirSync("dist/static")
+            .filter((file) => /\.(jpe?g|png|gif|bmp|webp|svg)$/i.test(file));
+
+        const imagePromises = imageFiles.map(async (file) => {
+            const imagePath = path.join("dist/static", file);
+            const { width, height } = await sharp(imagePath).metadata();
+            imageMeta[file] = `width="${width}" height="${height}"`;
+        });
+
+        await Promise.all(imagePromises);
+    };
+
+    await Promise.all([
+        copyFilteredFiles(),
+        fs.cp("static", "dist/static", { recursive: true }),
+        fs.cp("public", "dist", { recursive: true }),
+        fs.copyFile("dist/home/index.html", "dist/index.html"),
+        fs.rm("dist/home", { recursive: true }),
+        fs.copyFile("dist/post/index.html", "dist/p/index.html"),
+        fs.rm("dist/post", { recursive: true }),
+        fs.copyFile("dist/404/index.html", "dist/404.html"),
+        fs.rm("dist/404", { recursive: true })
+    ]);
+};
 
 // 讀取文章並生成 HTML 和 JSON
 async function processPosts() {
@@ -510,54 +498,6 @@ async function processPosts() {
     });
 
     // 生成 tags 和 categories 的 json
-    generateTagsAndCategories();
-}
-
-// 提取 front matter
-function extractFrontMatter(content) {
-    const frontMatterMatch = content.match(/---[\s\S]+?---/);
-    let meta = {};
-    if (frontMatterMatch) {
-        const frontMatter = frontMatterMatch[0];
-        const lines = frontMatter.split("\n").slice(1, -1); // 去掉 '---'
-        meta = {};
-        lines.forEach((line) => {
-            if (!line.includes(": ") || line.startsWith("#")) return;
-            const [key, value] = line.split(": ");
-            const trimmedKey = key.trim();
-            const trimmedValue = value.trim();
-
-            // 檢查是否為陣列格式
-            if (trimmedValue.startsWith("[") && trimmedValue.endsWith("]")) {
-                // 用正則表達式將每個元素加上雙引號，處理字串內容、特殊字符和空格
-                const fixedValue = trimmedValue
-                    .replaceAll("，", ",")
-                    .replace(
-                        /("[^"]+"|[^,\[\]\s]+(?:\s+[^,\[\]\s]+)*)/g,
-                        '"$1"'
-                    )
-                    // 把，換成 ,，但如果是引號裡面的就不換
-                    .replace(/，(?=(?:(?:[^"]*"){2})*[^"]*$)/g, ",");
-                // 移除多餘的雙引號（避免連續引號問題）
-                const sanitizedValue = fixedValue.replace(/"{2,}/g, '"');
-                meta[trimmedKey] = JSON.parse(sanitizedValue);
-            } else if (trimmedKey === "date") {
-                // 將日期轉換為 JavaScript timestamp
-                meta[trimmedKey] = new Date(trimmedValue).getTime();
-            } else {
-                // 處理為字串，並去除包裹的引號
-                meta[trimmedKey] = trimmedValue.replace(/^['"]|['"]$/g, "");
-            }
-        });
-    }
-
-    return meta;
-}
-
-let tags = {}; // 需要按順序排
-const categories = {};
-// 生成 tags 和 categories 的 json 檔
-function generateTagsAndCategories() {
     const tagsMap = {};
     const categoriesMap = {};
     const search = []; // only title,discription, and id. for search
@@ -624,7 +564,48 @@ function generateTagsAndCategories() {
     analyze.posts = postsMeta.length;
 }
 
-function getCurrentPubDate() {
+// 提取 front matter
+function extractFrontMatter(content) {
+    const frontMatterMatch = content.match(/---[\s\S]+?---/);
+    let meta = {};
+    if (frontMatterMatch) {
+        const frontMatter = frontMatterMatch[0];
+        const lines = frontMatter.split("\n").slice(1, -1); // 去掉 '---'
+        meta = {};
+        lines.forEach((line) => {
+            if (!line.includes(": ") || line.startsWith("#")) return;
+            const [key, value] = line.split(": ");
+            const trimmedKey = key.trim();
+            const trimmedValue = value.trim();
+
+            // 檢查是否為陣列格式
+            if (trimmedValue.startsWith("[") && trimmedValue.endsWith("]")) {
+                // 用正則表達式將每個元素加上雙引號，處理字串內容、特殊字符和空格
+                const fixedValue = trimmedValue
+                    .replaceAll("，", ",")
+                    .replace(
+                        /("[^"]+"|[^,\[\]\s]+(?:\s+[^,\[\]\s]+)*)/g,
+                        '"$1"'
+                    )
+                    // 把，換成 ,，但如果是引號裡面的就不換
+                    .replace(/，(?=(?:(?:[^"]*"){2})*[^"]*$)/g, ",");
+                // 移除多餘的雙引號（避免連續引號問題）
+                const sanitizedValue = fixedValue.replace(/"{2,}/g, '"');
+                meta[trimmedKey] = JSON.parse(sanitizedValue);
+            } else if (trimmedKey === "date") {
+                // 將日期轉換為 JavaScript timestamp
+                meta[trimmedKey] = new Date(trimmedValue).getTime();
+            } else {
+                // 處理為字串，並去除包裹的引號
+                meta[trimmedKey] = trimmedValue.replace(/^['"]|['"]$/g, "");
+            }
+        });
+    }
+
+    return meta;
+}
+
+const getCurrentPubDate = () => {
     const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     const months = [
         "Jan",
@@ -652,12 +633,9 @@ function getCurrentPubDate() {
     const minutes = String(now.getUTCMinutes()).padStart(2, "0");
     const seconds = String(now.getUTCSeconds()).padStart(2, "0");
 
-    const pubDate = `${dayName}, ${day} ${month} ${year} ${hours}:${minutes}:${seconds} +0000`;
+    return `${dayName}, ${day} ${month} ${year} ${hours}:${minutes}:${seconds} +0000`;
+};
 
-    return pubDate;
-}
-
-// Sitemap 和 RSS 生成
 function generateSitemapAndRSS() {
     // 所有葉面列出，包括首頁，文章頁，標籤頁，分類頁
     const allPage = [
@@ -789,7 +767,7 @@ async function findRepresentativeColors(imagePath) {
 }
 
 // 主程式流程
-async function generateSite() {
+(async () => {
     console.log(
         "\x1b[33m%s\x1b[0m",
         `  
@@ -805,25 +783,20 @@ async function generateSite() {
          ##                                                                
 `
     );
-    console.log("\x1b[32m%s\x1b[0m", "emtech Site Generator v1.0");
+    console.log("\x1b[32m%s\x1b[0m", "emtech Site Generator");
     console.log("\x1b[34m%s\x1b[0m", "➤ Generating site...");
     console.time("Execution Time");
-    console.log("\x1b[34m%s\x1b[0m", "➤ Reading partials...");
-    generatePartials();
     console.log("\x1b[34m%s\x1b[0m", "➤ Initializing dist folder...");
-    initDist();
-    console.log("\x1b[34m%s\x1b[0m", "➤ Copying static files...");
-    copyStatic();
-    //return;
+    await initDist();
+    console.log("\x1b[34m%s\x1b[0m", "➤ Preparing site...");
+    await Promise.all([generatePartials(), copyStatic()]);
     console.log("\x1b[34m%s\x1b[0m", "➤ Processing posts...");
     if (!skipPost) {
         await processPosts();
         console.log("\x1b[34m%s\x1b[0m", "➤ Generating sitemap and RSS...");
-        generateSitemapAndRSS();
+        await generateSitemapAndRSS();
         console.table(analyze);
     }
     console.log("\x1b[35m%s\x1b[0m", "➤ Site generated successfully!");
     console.timeEnd("Execution Time");
-}
-
-generateSite();
+})();
