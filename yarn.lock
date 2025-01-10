@@ -189,15 +189,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/highlight.js@npm:^10.1.0":
-  version: 10.1.0
-  resolution: "@types/highlight.js@npm:10.1.0"
-  dependencies:
-    highlight.js: "npm:*"
-  checksum: 10c0/bffb2c7a625117dd6082197f0999855ce368552159d0b098ef3af02da3cdd7a758f551802329ee2bbdde2ec0af5a997f40fc670af20a5387efe4c5b95a41d444
-  languageName: node
-  linkType: hard
-
 "argparse@npm:^2.0.1":
   version: 2.0.1
   resolution: "argparse@npm:2.0.1"
@@ -313,7 +304,6 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "emtech@workspace:."
   dependencies:
-    "@types/highlight.js": "npm:^10.1.0"
     autocorrect-node: "npm:^2.13.0"
     highlight.js: "npm:^11.10.0"
     markdown-it: "npm:^14.1.0"
@@ -327,13 +317,6 @@ __metadata:
   version: 4.5.0
   resolution: "entities@npm:4.5.0"
   checksum: 10c0/5b039739f7621f5d1ad996715e53d964035f75ad3b9a4d38c6b3804bb226e282ffeae2443624d8fdd9c47d8e926ae9ac009c54671243f0c3294c26af7cc85250
-  languageName: node
-  linkType: hard
-
-"highlight.js@npm:*":
-  version: 11.11.1
-  resolution: "highlight.js@npm:11.11.1"
-  checksum: 10c0/40f53ac19dac079891fcefd5bd8a21cf2e8931fd47da5bd1dca73b7e4375c1defed0636fc39120c639b9c44119b7d110f7f0c15aa899557a5a1c8910f3c0144c
   languageName: node
   linkType: hard
 
