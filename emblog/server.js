@@ -1,3 +1,5 @@
+//@ts-check
+
 import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
@@ -8,6 +10,12 @@ const baseDirectory = new URL("../dist", import.meta.url).pathname;
 
 const server = http.createServer((req, res) => {
     try {
+        if (!req.url) {
+            res.writeHead(400, { "Content-Type": "text/plain" });
+            res.end("400 Bad Request");
+            return;
+        }
+
         // Decode the URL to handle special characters like Chinese
         let decodedUrl = decodeURIComponent(req.url);
 

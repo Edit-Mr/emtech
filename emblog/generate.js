@@ -1,3 +1,5 @@
+//@ts-check
+
 import fs from "node:fs";
 import path from "node:path";
 import markdownIt from "markdown-it";
@@ -81,9 +83,10 @@ md.renderer.rules.fence = (tokens, idx, options, env, self) => {
     const langName = token.info || "code";
 
     // Use the highlighted code with line numbers
-    const highlightedCode = md.options.highlight(
+    const highlightedCode = md.options.highlight?.(
         token.content,
-        token.info.trim()
+        token.info.trim(),
+        "",
     );
     if (!highlightedCode) {
         return `<pre tabindex="0" class="chroma wtf"><code class="${langClass} hljs" data-lang="${langName}">${md.utils.escapeHtml(
@@ -260,7 +263,7 @@ async function processPosts() {
                     recursive: true,
                     filter: (src) => {
                         return (
-                            src.split("\\").pop().split("/").pop() !==
+                            src.split("\\").pop()?.split("/").pop() !==
                             "index.md"
                         );
                     }
@@ -289,7 +292,7 @@ async function processPosts() {
                 );
 
                 if (!postMeta.title) {
-                    postMeta.title = htmlContent.match(/<h1>(.*?)<\/h1>/)[1];
+                    postMeta.title = htmlContent.match(/<h1>(.*?)<\/h1>/)?.[1];
                     // remove the first h1 tag
                     htmlContent = htmlContent.replace(/<h1>.*?<\/h1>/, "");
                 }
@@ -304,7 +307,7 @@ async function processPosts() {
             </div>`;
                 } else {
                     postMeta.description =
-                        htmlContent.match(/<p>(.*?)<\/p>/)[1];
+                        htmlContent.match(/<p>(.*?)<\/p>/)?.[1];
                 }
                 // remove html tags from the description
                 postMeta.description = postMeta.description.replace(
