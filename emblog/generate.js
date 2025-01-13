@@ -361,8 +361,8 @@ async function processPosts() {
                 // turn to k, if length > 1000. Fixed to 1 decimal place
                 postMeta.length =
                     length > 1000 ? (length / 1000).toFixed(1) + "k" : length;
-                postMeta.lastUpdated =
-                    (await fs.stat(markdownFile).mtime) || "";
+                // postMeta.lastUpdated =
+                //     (await fs.stat(markdownFile).mtime) || "";
                 if (!postMeta.readingTime) {
                     const chineseReadingSpeed = 300; // 每分鐘 300 字
                     const englishReadingSpeed = 200; // 每分鐘 200 單詞
@@ -683,7 +683,7 @@ const generateSitemapAndRSS = async () => {
         .map(
             (post) => ` <url>
     <loc>https://emtech.cc/p/${post.id}</loc>
-    <lastmod>${new Date(post.lastUpdated || null).toISOString()}</lastmod>
+  ${post.lastUpdated ? "<lastmod>" + new Date(post.lastUpdated).toISOString() + "</lastmod>" : ""}
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>`
@@ -711,7 +711,7 @@ const generateSitemapAndRSS = async () => {
       <title>${post.title}</title>
       <link>https://emtech.cc/p/${post.id}</link>
       <description>${post.description}</description>
-      <pubDate>${new Date(post.lastUpdated).toUTCString()}</pubDate>
+      <pubDate>${new Date(post.date).toUTCString()}</pubDate>
       <guid>https://emtech.cc/p/${post.id}</guid>
     </item>`
         )
