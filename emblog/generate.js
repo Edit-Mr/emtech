@@ -62,6 +62,8 @@ const slugify = (text) =>
 md.renderer.rules.heading_open = (tokens, idx, options, env, self) => {
     const token = tokens[idx];
     const level = token.tag.slice(1); // Get the heading level (h1, h2, etc.)
+    // if h1 just return
+    if (level === "1") return self.renderToken(tokens, idx, options);
     const title = tokens[idx + 1].content; // Get the heading text content
     const slug = slugify(title); // Generate slug based on the text content
     token.attrPush(["id", slug]);
@@ -106,7 +108,7 @@ md.renderer.rules.fence = (tokens, idx, options, env, self) => {
 };
 
 // Custom renderer for images to include figcaption
-md.renderer.rules.image = async (tokens, idx, options, env, self) => {
+md.renderer.rules.image = (tokens, idx, options, env, self) => {
     const token = tokens[idx];
     let src = token.attrs[token.attrIndex("src")][1];
     const alt = token.content || ""; // Use alt as caption
@@ -176,66 +178,80 @@ const generatePartials = async () => {
                 partialsContent[partial] = rendered;
             else partialsToRender.delete(partial);
         }
-};
 
-const copyStatic = async () => {
     const files = await fs.readdir("view/pages");
     // Filter for .html files
     const viewFiles = files.filter((file) => file.endsWith(".html"));
 
-    const filePromises = viewFiles.map(async (file) => {
-        const dirName = path.basename(file, ".html");
-        const dirPath = `dist/${dirName}`;
-        await fs.mkdir(dirPath, { recursive: true });
-        let fileContent = await fs.readFile(`view/pages/${file}`, "utf8");
-        fileContent = renderPartials(fileContent);
-        await fs.writeFile(`${dirPath}/index.html`, fileContent);
-    });
-
-    await Promise.all(filePromises);
+    await Promise.all(
+        viewFiles.map(async (file) => {
+            const dirName = path.basename(file, ".html");
+            const dirPath = `dist/${dirName}`;
+            await fs.mkdir(dirPath, { recursive: true });
+            let fileContent = await fs.readFile(`view/pages/${file}`, "utf8");
+            fileContent = renderPartials(fileContent);
+            await fs.writeFile(`${dirPath}/index.html`, fileContent);
+        })
+    );
 
     console.log("➤ Found view files: ", viewFiles);
 
     analyze.pages = viewFiles.length;
 
+    await Promise.all([
+        fs.copyFile("dist/home/index.html", "dist/index.html"),
+        fs.copyFile("dist/post/index.html", "dist/p/index.html"),
+        fs.copyFile("dist/404/index.html", "dist/404.html")
+    ]);
+    await Promise.all([
+        fs.rm("dist/home", { recursive: true }),
+        fs.rm("dist/post", { recursive: true }),
+        fs.rm("dist/404", { recursive: true })
+    ]);
+};
+
+const copyStatic = async () => {
     const copyFilteredFiles = async () => {
         const sourceDir = "post";
         const targetDir = "dist/static";
-        let files = await fs.readdir(sourceDir);
-        const filteredFiles = files.filter((file) => file !== "index.md");
+        let files = await fs.readdir(sourceDir, {
+            withFileTypes: true,
+            recursive: true
+        });
+        const filteredFiles = files.filter(
+            (file) => file.isFile() && file.name !== "index.md"
+        );
         const copyPromises = filteredFiles.map(async (file) => {
-            const sourcePath = path.join(sourceDir, file);
-            const targetPath = path.join(targetDir, file);
+            const sourcePath = path.join(file.parentPath, file.name);
+            const targetPath = path.join(
+                targetDir,
+                file.parentPath.split("\\").pop(),
+                file.name
+            );
             await fs.cp(sourcePath, targetPath, { recursive: true });
+            // test if is image
+            if (
+                /\.(jpe?g|png|gif|bmp|webp|svg)$/i.test(file.name) &&
+                !imageMeta[file.parentPath]
+            ) {
+                const { width, height } = await sharp(sourcePath).metadata();
+                imageMeta[
+                    "/static/" +
+                        file.parentPath.split("\\").pop() +
+                        "/" +
+                        file.name
+                ] = `width="${width}" height="${height}"`;
+            }
         });
 
         await Promise.all(copyPromises);
-
-        // copy and analyze images
-        files = await fs.readdir("dist/static");
-        const imageFiles = files.filter((file) =>
-            /\.(jpe?g|png|gif|bmp|webp|svg)$/i.test(file)
-        );
-
-        const imagePromises = imageFiles.map(async (file) => {
-            const imagePath = path.join("dist/static", file);
-            const { width, height } = await sharp(imagePath).metadata();
-            imageMeta[file] = `width="${width}" height="${height}"`;
-        });
-
-        await Promise.all(imagePromises);
+        console.log(imageMeta);
     };
 
     await Promise.all([
         copyFilteredFiles(),
         fs.cp("static", "dist/static", { recursive: true }),
-        fs.cp("public", "dist", { recursive: true }),
-        fs.copyFile("dist/home/index.html", "dist/index.html"),
-        fs.rm("dist/home", { recursive: true }),
-        fs.copyFile("dist/post/index.html", "dist/p/index.html"),
-        fs.rm("dist/post", { recursive: true }),
-        fs.copyFile("dist/404/index.html", "dist/404.html"),
-        fs.rm("dist/404", { recursive: true })
+        fs.cp("public", "dist", { recursive: true })
     ]);
 };
 
@@ -257,138 +273,148 @@ async function processPosts() {
         await fs.readFile("view/pages/post.html", "utf8")
     );
 
-    for (const postID of postFolders) {
-        try {
-            const postPath = path.join(postsDir, postID);
-            const markdownFile = path.join(postPath, "index.md");
+    await Promise.all(
+        postFolders.map(async (postID) => {
             try {
-                await fs.access(markdownFile); // Checks if file exists
-                console.log(`➤ Processing post: ${postID}`);
-            } catch (error) {
-                console.warn(`➤ No markdown file found for post: ${postID}`);
-                continue;
-            }
-            let markdownContent = (
-                await fs.readFile(markdownFile, "utf8")
-            ).replace(/<!--[\s\S]+?-->/g, "");
+                const postPath = path.join(postsDir, postID);
+                const markdownFile = path.join(postPath, "index.md");
+                try {
+                    await fs.access(markdownFile); // Checks if file exists
+                    console.log(`➤ Processing post: ${postID}`);
+                } catch (error) {
+                    console.warn(
+                        `➤ No markdown file found for post: ${postID}`
+                    );
+                    return;
+                }
+                let markdownContent = (
+                    await fs.readFile(markdownFile, "utf8")
+                ).replace(/<!--[\s\S]+?-->/g, "");
 
-            let postMeta = extractFrontMatter(markdownContent);
-            let colors;
-            // turn image url if not set path like ![](image.webp) to ![](/static/postID/image.webp)
-            // don't change url if absolute path or relative path like /static/image.webp or ../image.webp or https://image.webp
-            if (postMeta.draft == "true") {
-                console.log(`➤ Skip post: ${postID}`);
-                continue;
-            }
-            markdownContent = markdownContent.replace(
-                /!\[(.*?)\]\((?!https?:\/\/|\/)(.*?)\)/g,
-                (_, altText, url) =>
-                    `![${altText}](/static/${encodeURIComponent(postID)}/${url})`
-            );
-            let htmlContent = md.render(
-                renderPartials(markdownContent.replace(/---[\s\S]+?---/, ""))
-            );
-
-            if (!postMeta.title) {
-                postMeta.title = htmlContent.match(/<h1>(.*?)<\/h1>/)[1];
-                // remove the first h1 tag
-                htmlContent = htmlContent.replace(/<h1>.*?<\/h1>/, "");
-            }
-            let tldr = "";
-            // get description from the first paragraph of the post
-            if (postMeta.description) {
-                tldr = `<div class="tldr">
+                let postMeta = extractFrontMatter(markdownContent);
+                let colors;
+                // turn image url if not set path like ![](image.webp) to ![](/static/postID/image.webp)
+                // don't change url if absolute path or relative path like /static/image.webp or ../image.webp or https://image.webp
+                if (postMeta.draft == "true") {
+                    console.log(`➤ Skip post: ${postID}`);
+                    return;
+                }
+                markdownContent = markdownContent.replace(
+                    /!\[(.*?)\]\((?!https?:\/\/|\/)(.*?)\)/g,
+                    (_, altText, url) =>
+                        `![${altText}](/static/${encodeURIComponent(postID)}/${url})`
+                );
+                let htmlContent = md.render(
+                    renderPartials(
+                        markdownContent.replace(/---[\s\S]+?---/, "")
+                    )
+                );
+                if (!postMeta.title) {
+                    postMeta.title = htmlContent.match(/<h1>(.*?)<\/h1>/)[1];
+                    // remove the first h1 tag
+                    htmlContent = htmlContent.replace(/<h1>.*?<\/h1>/, "");
+                }
+                let tldr = "";
+                // get description from the first paragraph of the post
+                if (postMeta.description) {
+                    tldr = `<div class="tldr">
                 <h2>簡單來說</h2>
                 <div>
                     ${postMeta.description}
                 </div>
             </div>`;
-            } else {
-                postMeta.description = htmlContent.match(/<p>(.*?)<\/p>/)[1];
-            }
-            // remove html tags from the description
-            postMeta.description = postMeta.description.replace(/<[^>]+>/g, "");
-            const thumbnail =
-                postMeta.thumbnail ||
-                (fs.existsSync(path.join(postPath, "thumbnail.webp"))
-                    ? `/static/${postID}/thumbnail.webp`
-                    : "");
-            if (
-                !postMeta.colors &&
-                thumbnail.includes(".") &&
-                !thumbnail.includes("http")
-            ) {
-                colors = await findRepresentativeColors(
-                    path.join("dist", thumbnail)
+                } else {
+                    postMeta.description =
+                        htmlContent.match(/<p>(.*?)<\/p>/)[1];
+                }
+                // remove html tags from the description
+                postMeta.description = postMeta.description.replace(
+                    /<[^>]+>/g,
+                    ""
                 );
-                postMeta.colors =
-                    "linear-gradient(135deg, " + colors[0].join(", ") + ")";
-                postMeta.color = colors[0][1];
-                postMeta.thumbnailSize = colors[1];
-            }
+                const thumbnail =
+                    postMeta.thumbnail ||
+                    (imageMeta[`${postID}.webp`]
+                        ? `/static/${postID}/thumbnail.webp`
+                        : "");
+                if (
+                    !postMeta.colors &&
+                    thumbnail.includes(".") &&
+                    !thumbnail.includes("http")
+                ) {
+                    colors = await findRepresentativeColors(
+                        path.join("dist", thumbnail)
+                    );
+                    postMeta.colors =
+                        "linear-gradient(135deg, " + colors[0].join(", ") + ")";
+                    postMeta.color = colors[0][1];
+                    postMeta.thumbnailSize = colors[1];
+                }
 
-            const chineseCharCount = (
-                markdownContent.match(/[\u4e00-\u9fa5]/g) || []
-            ).length;
-            const englishWordCount = (markdownContent.match(/\b\w+\b/g) || [])
-                .length;
-            const length = chineseCharCount + englishWordCount;
-            // turn to k, if length > 1000. Fixed to 1 decimal place
-            postMeta.length =
-                length > 1000 ? (length / 1000).toFixed(1) + "k" : length;
-            postMeta.lastUpdated = fs.statSync(markdownFile).mtime;
-            if (!postMeta.readingTime) {
-                const chineseReadingSpeed = 300; // 每分鐘 300 字
-                const englishReadingSpeed = 200; // 每分鐘 200 單詞
-                const chineseReadingTime =
-                    chineseCharCount / chineseReadingSpeed;
-                const englishReadingTime =
-                    englishWordCount / englishReadingSpeed;
-                const totalReadingTime =
-                    chineseReadingTime + englishReadingTime;
-                postMeta.readingTime = Math.ceil(totalReadingTime) + " min";
-            }
+                const chineseCharCount = (
+                    markdownContent.match(/[\u4e00-\u9fa5]/g) || []
+                ).length;
+                const englishWordCount = (
+                    markdownContent.match(/\b\w+\b/g) || []
+                ).length;
+                const length = chineseCharCount + englishWordCount;
+                // turn to k, if length > 1000. Fixed to 1 decimal place
+                postMeta.length =
+                    length > 1000 ? (length / 1000).toFixed(1) + "k" : length;
+                postMeta.lastUpdated =
+                    (await fs.stat(markdownFile).mtime) || "";
+                if (!postMeta.readingTime) {
+                    const chineseReadingSpeed = 300; // 每分鐘 300 字
+                    const englishReadingSpeed = 200; // 每分鐘 200 單詞
+                    const chineseReadingTime =
+                        chineseCharCount / chineseReadingSpeed;
+                    const englishReadingTime =
+                        englishWordCount / englishReadingSpeed;
+                    const totalReadingTime =
+                        chineseReadingTime + englishReadingTime;
+                    postMeta.readingTime = Math.ceil(totalReadingTime) + " min";
+                }
 
-            postMeta = {
-                ...postMeta,
-                id: postID,
-                title: postMeta.title || "無題",
-                description: postMeta.description || null,
-                thumbnail,
-                length
-            };
+                postMeta = {
+                    ...postMeta,
+                    id: postID,
+                    title: postMeta.title || "無題",
+                    description: postMeta.description || null,
+                    thumbnail,
+                    length
+                };
 
-            postsMeta.push(postMeta);
-            //<div class="header-categorie">閒聊</div> for each, combine all to a string
-            const headerCategories = postMeta.categories
-                ? postMeta.categories
-                      .map(
-                          (category) =>
-                              `<a href="/category/${category}"><div class="header-categorie">${category}</div></a>`
-                      )
-                      .join("")
-                : "";
-            const headerTags = postMeta.tags
-                ? postMeta.tags
-                      .map(
-                          (tag) =>
-                              `<a href="/tag/${tag}"><div class="header-tag">${tag}</div></a>`
-                      )
-                      .join("")
-                : "";
-            const postTags = postMeta.tags
-                ? postMeta.tags
-                      .map(
-                          (tag) =>
-                              `<a href="/tag/${tag}"><div class="post-tag">${tag}</div></a>`
-                      )
-                      .join("")
-                : "";
-            const categoriesreadcrumbList = // combine postMeta.categories and postMeta.tags
-                (postMeta.categories || [])
-                    .map(
-                        (tag) =>
-                            `,{
+                postsMeta.push(postMeta);
+                //<div class="header-categorie">閒聊</div> for each, combine all to a string
+                const headerCategories = postMeta.categories
+                    ? postMeta.categories
+                          .map(
+                              (category) =>
+                                  `<a href="/category/${category}"><div class="header-categorie">${category}</div></a>`
+                          )
+                          .join("")
+                    : "";
+                const headerTags = postMeta.tags
+                    ? postMeta.tags
+                          .map(
+                              (tag) =>
+                                  `<a href="/tag/${tag}"><div class="header-tag">${tag}</div></a>`
+                          )
+                          .join("")
+                    : "";
+                const postTags = postMeta.tags
+                    ? postMeta.tags
+                          .map(
+                              (tag) =>
+                                  `<a href="/tag/${tag}"><div class="post-tag">${tag}</div></a>`
+                          )
+                          .join("")
+                    : "";
+                const categoriesreadcrumbList = // combine postMeta.categories and postMeta.tags
+                    (postMeta.categories || [])
+                        .map(
+                            (tag) =>
+                                `,{
                                     "@context": "https://schema.org",
                                     "@type": "BreadcrumbList",
                                     "itemListElement": [{
@@ -402,14 +428,14 @@ async function processPosts() {
                                       "name": "${postMeta.title}"
                                     }]
                                   }`
-                    )
-                    .join("");
+                        )
+                        .join("");
 
-            const tagsBreadcrumbList = // combine postMeta.categories and postMeta.tags
-                (postMeta.tags || [])
-                    .map(
-                        (tag) =>
-                            `,{
+                const tagsBreadcrumbList = // combine postMeta.categories and postMeta.tags
+                    (postMeta.tags || [])
+                        .map(
+                            (tag) =>
+                                `,{
                                     "@context": "https://schema.org",
                                     "@type": "BreadcrumbList",
                                     "itemListElement": [{
@@ -423,64 +449,72 @@ async function processPosts() {
                                       "name": "${postMeta.title}"
                                     }]
                                   }`
-                    )
-                    .join("");
+                        )
+                        .join("");
 
-            const BreadcrumbList = tagsBreadcrumbList + categoriesreadcrumbList;
-            const replacements = {
-                title: postMeta.title,
-                content: htmlContent,
-                tldr,
-                BreadcrumbList,
-                thumbnail: thumbnail,
-                thumbnailWidth: postMeta.thumbnailSize
-                    ? postMeta.thumbnailSize[0]
-                    : "",
-                thumbnailHeight: postMeta.thumbnailSize
-                    ? postMeta.thumbnailSize[1]
-                    : "",
-                length: postMeta.length,
-                colors: postMeta.colors,
-                readingTime: postMeta.readingTime,
-                date: new Date(postMeta.date).toISOString().split("T")[0],
-                lastUpdated: postMeta.lastUpdated,
-                theme: postMeta.color,
-                postTags,
-                headerCategories,
-                headerTags,
-                postID,
-                description: postMeta.description
-            };
-            const fullPostHtml = replacePlaceholders(
-                postTemplate,
-                replacements
-            );
-            const fullPostPageHtml = replacePlaceholders(postPageTemplate, {
-                ...replacements,
-                post: fullPostHtml
-            });
-            fs.writeFileSync(`dist/p/clean/${postID}.html`, fullPostHtml);
+                const BreadcrumbList =
+                    tagsBreadcrumbList + categoriesreadcrumbList;
+                const replacements = {
+                    title: postMeta.title,
+                    content: htmlContent,
+                    tldr,
+                    BreadcrumbList,
+                    thumbnail: thumbnail,
+                    thumbnailWidth: postMeta.thumbnailSize
+                        ? postMeta.thumbnailSize[0]
+                        : "",
+                    thumbnailHeight: postMeta.thumbnailSize
+                        ? postMeta.thumbnailSize[1]
+                        : "",
+                    length: postMeta.length,
+                    colors: postMeta.colors,
+                    readingTime: postMeta.readingTime,
+                    date: new Date(postMeta.date).toISOString().split("T")[0],
+                    lastUpdated: postMeta.lastUpdated,
+                    theme: postMeta.color,
+                    postTags,
+                    headerCategories,
+                    headerTags,
+                    postID,
+                    description: postMeta.description
+                };
+                const fullPostHtml = replacePlaceholders(
+                    postTemplate,
+                    replacements
+                );
+                const fullPostPageHtml = replacePlaceholders(postPageTemplate, {
+                    ...replacements,
+                    post: fullPostHtml
+                });
+                await fs.writeFile(`dist/p/clean/${postID}.html`, fullPostHtml);
 
-            fs.mkdirSync(`dist/p/${postID}`, { recursive: true });
-            fs.writeFileSync(`dist/p/${postID}/index.html`, fullPostPageHtml);
-        } catch (error) {
-            console.error(`➤ Error processing post: ${postID}`);
-            console.error(error);
-        }
-    }
+                await fs.mkdir(`dist/p/${postID}`, { recursive: true });
+                await fs.writeFile(
+                    `dist/p/${postID}/index.html`,
+                    fullPostPageHtml
+                );
+            } catch (error) {
+                console.error(`➤ Error processing post: ${postID}`);
+                console.error(error);
+            }
+        })
+    );
 
     // 輸出 posts.json 和每篇文章的 json
-    fs.mkdirSync("dist/p/meta", { recursive: true });
-    fs.writeFileSync(
+    await fs.writeFile(
         "dist/p/meta/posts.json",
         JSON.stringify(postsMeta, null, 2)
     );
-    postsMeta.forEach((post) => {
-        fs.writeFileSync(
-            `dist/p/meta/${post.id}.json`,
-            JSON.stringify(post, null, 2)
-        );
-    });
+
+    // Write individual post JSON files concurrently
+    await Promise.all(
+        postsMeta.map((post) =>
+            fs.writeFile(
+                `dist/p/meta/${post.id}.json`,
+                JSON.stringify(post, null, 2)
+            )
+        )
+    );
 
     // 生成 tags 和 categories 的 json
     const tagsMap = {};
@@ -512,19 +546,20 @@ async function processPosts() {
     });
 
     // 輸出 tags 和 categories
-    fs.mkdirSync("dist/meta/tag", { recursive: true });
-    fs.mkdirSync("dist/meta/category", { recursive: true });
-    fs.writeFileSync("dist/meta/search.json", JSON.stringify(search, null, 2));
+    await fs.writeFile(
+        "dist/meta/search.json",
+        JSON.stringify(search, null, 2)
+    );
 
     for (const [tag, posts] of Object.entries(tagsMap)) {
-        fs.writeFileSync(
+        await fs.writeFile(
             `dist/meta/tag/${tag}.json`,
             JSON.stringify(posts, null, 2)
         );
     }
 
     for (const [category, posts] of Object.entries(categoriesMap)) {
-        fs.writeFileSync(
+        await fs.writeFile(
             `dist/meta/category/${category}.json`,
             JSON.stringify(posts, null, 2)
         );
@@ -538,7 +573,7 @@ async function processPosts() {
             return acc;
         }, {});
 
-    fs.writeFileSync(
+    await fs.writeFile(
         "dist/meta/tags.json",
         JSON.stringify({ tags, categories }, null, 2)
     );
@@ -621,7 +656,7 @@ const getCurrentPubDate = () => {
     return `${dayName}, ${day} ${month} ${year} ${hours}:${minutes}:${seconds} +0000`;
 };
 
-function generateSitemapAndRSS() {
+const generateSitemapAndRSS = async () => {
     // 所有葉面列出，包括首頁，文章頁，標籤頁，分類頁
     const allPage = [
         "https://emtech.cc",
@@ -637,7 +672,7 @@ function generateSitemapAndRSS() {
             )
         );
 
-    fs.writeFileSync(
+    await fs.writeFile(
         "dist/pages.txt",
         allPage.map((url) => encodeURI(url)).join("\n")
     );
@@ -648,13 +683,13 @@ function generateSitemapAndRSS() {
         .map(
             (post) => ` <url>
     <loc>https://emtech.cc/p/${post.id}</loc>
-    <lastmod>${new Date(post.lastUpdated).toISOString()}</lastmod>
+    <lastmod>${new Date(post.lastUpdated || null).toISOString()}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>`
         )
         .join("\n");
-    fs.writeFileSync(
+    await fs.writeFile(
         "dist/sitemap.xml",
         `<?xml version="1.0" encoding="UTF-8"?>
         <?xml-stylesheet type="text/xsl" href="/static/sitemap.xsl"?>
@@ -681,7 +716,7 @@ function generateSitemapAndRSS() {
     </item>`
         )
         .join("\n");
-    fs.writeFileSync(
+    await fs.writeFile(
         "dist/rss.xml",
         `<?xml version="1.0" encoding="UTF-8"?>
         <?xml-stylesheet type="text/xsl" href="/static/rss.xsl"?>
@@ -697,7 +732,7 @@ function generateSitemapAndRSS() {
         <ttl>1800</ttl>
         ${rssItems}</channel></rss>`
     );
-}
+};
 
 async function findRepresentativeColors(imagePath) {
     const { width, height } = await sharp(imagePath).metadata();
