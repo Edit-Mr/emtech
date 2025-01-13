@@ -115,7 +115,7 @@ md.renderer.rules.image = (tokens, idx, options, env, self) => {
     const title = token.attrs[token.attrIndex("title")]
         ? token.attrs[token.attrIndex("title")][1]
         : "";
-    let wh = imageMeta[src] || "";
+    let wh = imageMeta[decodeURIComponent(src)] || "";
     return `
         <figure>
             <img src="${src}" alt="${alt}" title="${title}" ${wh}>
@@ -334,7 +334,7 @@ async function processPosts() {
                 );
                 const thumbnail =
                     postMeta.thumbnail ||
-                    (imageMeta[`${postID}.webp`]
+                    (imageMeta[`/static/${postID}/thumbnail.webp`]
                         ? `/static/${postID}/thumbnail.webp`
                         : "");
                 if (
