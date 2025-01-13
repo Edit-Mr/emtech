@@ -13,8 +13,8 @@ const isLocalhost =
     window.location.hostname === "localhost" ||
     window.location.hostname === "127.0.0.1";
 const startAds = isLocalhost
-    ? () => (adsbygoogle = window.adsbygoogle || []).push({})
-    : () => {};
+    ? () => {}
+    : () => (adsbygoogle = window.adsbygoogle || []).push({});
 
 // update read history list
 const updateReadHistory = (id) => {
