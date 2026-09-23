@@ -29,7 +29,7 @@ project-final-final-real-2
 
 恭喜你，其實你已經在做版本控制了。
 
-只是做得挺糟的。
+只是看起來挺糟的。
 
 這篇文章會帶你認識 **Git** 和 **GitHub**：兩個幾乎所有軟體開發者遲早都會遇到的東西。
 
@@ -124,7 +124,7 @@ project-final-final
 凌晨兩點：
 
 ```text
-project-final-final-真的
+project-final-final-real
 ```
 
 問題也開始出現了。
@@ -229,8 +229,6 @@ Git 花了十天就誕生了。
 
 ### 分散式版本控制
 
-Git 屬於這一類。
-
 每個開發者的電腦裡，都可以保有一份完整的 Repository 歷史。
 
 不只是現在最新的檔案。還包括過去的所有編輯版本歷史。因此就算今天沒有網路，你依然可以：
@@ -242,7 +240,7 @@ Git 屬於這一類。
 
 等到有網路之後，再跟其他人交換新的版本。
 
-這就是 Git 被稱為 **DVCS：Distributed Version Control System** 的原因。
+Git 屬於這一類 **DVCS：Distributed Version Control System**。
 
 ## Repository：專案的時光機
 
@@ -344,15 +342,7 @@ git status
 
 Git 就會告訴你現在有哪些東西發生變化。
 
-這個指令超級重要。
-
-如果你哪天不知道 Git 現在到底在幹嘛：
-
-```bash
-git status
-```
-
-他就會告訴你我是誰？我在哪？現在發生什麼事？
+這個指令很好用。他會告訴你我是誰？我在哪？現在發生什麼事？
 
 ## `git add`：把東西放進箱子
 
@@ -406,7 +396,7 @@ git status
 
 ## `git commit`：封箱
 
-Stage 完之後，就可以 Commit。
+Stage 完之後，就可以 Commit 封箱。
 
 ```bash
 git commit -m "feat: say hello"
@@ -454,7 +444,7 @@ ui/field: fix select menu positioning
 
 ## 第一次使用 Git：先設定你的名字
 
-我們要寄信，上面當然要寫寄件人。不過因為我們一台電腦寄出去的人基本上固定都是你，所以我們可以設定在 global，每個專案他會自己幫你戴上。
+我們要寄信，上面當然要寫寄件人。不過因為我們一台電腦寄出去的人基本上固定都是你，所以我們可以設定在 global，每個專案他會自己幫你加上去。
 
 第一次使用 Git 時，我們要設定姓名和電子郵件，記得改成你自己的名稱喔！
 
@@ -602,7 +592,7 @@ Public 只是「看得到」。不是「你想幹嘛都可以」。
 npm install
 ```
 
-後面都靠著幾百、幾千個你這輩子沒見過的人。
+後面都靠著幾百、幾千個你這輩子沒見過的人一起共同努力開發出來的。
 
 ## 建立 GitHub 帳號
 
@@ -645,6 +635,12 @@ Windows 如果有 `winget`：
 winget install --id Git.Git -e --source winget
 ```
 
+或是 Chocolatey：
+
+```powershell
+choco install git
+```
+
 Ubuntu / Debian
 
 ```bash
@@ -658,7 +654,7 @@ Fedora
 sudo dnf install git
 ```
 
-或是也可以直接到官網下載安裝程式。
+或是也可以直接到[官網](https://git-scm.com/)下載安裝程式。
 
 如果你是完全新手，大部分選項用預設值一路下一步，今天的課程通常就夠用了。
 
@@ -726,15 +722,21 @@ git clone https://github.com/USERNAME/git-workshop.git
 
 今天用 Visual Studio Code 當範例。
 
-打開剛才的資料夾，建立 `hi.txt`，然後隨便打點東西。
+打開剛才的資料夾，方法是點擊左上角的 `File` → `Open Folder` → 選擇剛才的資料夾
+
+> [!NOTE] 快捷鍵
+>
+> 快捷鍵是點擊 `Ctrl+K` 之後點擊 `Ctrl+O`（macOS 為單純 `Cmd+O`）。因為開啟資料夾會非常常用到所以建議可以記起來。
+
+接著建立 `hi.txt`，然後隨便打點東西。
 
 ![編輯新檔案](edit-text.webp)
 
-存檔。打開 VS Code 左邊的 Source Control（`Ctrl+Shift+G` / `Option+Shift+G`）
+存檔。打開 VS Code 左邊的 Source Control（Windows: `Ctrl+Shift+G` / macOS: `Option+Shift+G`）
 
 你應該會看到 Changes 底下出現 hi.txt。這代表 VS Code 已經透過 Git 發現檔案有變更。
 
-VS Code 的 Source Control，基本上就是把很多 Git 指令包成按鈕。你今天可以用 GUI，也可以用 Terminal，兩者本質是一樣的。
+VS Code 的 Source Control，基本上就是把很多 Git 指令包成按鈕。你今天可以用 GUI，也可以用 Terminal，兩者本質是差不多的。
 
 ## 用 VS Code 做第一次 Commit
 
@@ -770,7 +772,7 @@ Commit 完成後，可以直接在 VS Code Push。或者 Terminal：
 git push
 ```
 
-如果第一次需要指定：
+如果是第一次可能需要指定：
 
 ```bash
 git push -u origin main
@@ -883,13 +885,7 @@ git switch -c dev
 > git checkout -b dev
 > ```
 >
-> 現在比較推薦新手先使用：
->
-> ```bash
-> git switch
-> ```
-
-語意比較清楚。
+> 功能一樣，看你喜歡哪個。Git 把 checkout 指令的功能拆成 `switch` 和 `restore`，因為他功能太多了，這樣拆開來指令比較清楚。
 
 ## 在 Branch 裡面工作
 
@@ -1079,9 +1075,7 @@ Hello from dev!
 你決定。
 ```
 
-Git 不自己猜，其實是好事。
-
-因為它不知道你們誰才是對的。
+Git 不自己猜，其實是好事。因為它不知道你們誰才是對的。
 
 ## 用 VS Code 解 Conflict
 
@@ -1223,9 +1217,7 @@ git branch -M main
 git push -u origin main
 ```
 
-完成。
-
-這是非常常見的一套流程。
+完成。這是非常常見的一套流程。
 
 ## Pull Request：我想把我的 Code 合進去
 
@@ -1393,7 +1385,7 @@ PR 通常至少要有：
 
 好的 PR Description 可以讓 Reviewer 好看很多。不要只寫 fixed bug 之類的。
 
-## Code Review：不要看到綠色按鈕就 Merge
+## Code Review
 
 Pull Request 開完，不代表馬上 Merge。正常團隊通常會先 **Code Review**，Reviewer 可以打開 **Files changed** 看看你改了什麼。
 
@@ -1467,9 +1459,7 @@ Deploy
 網站上線
 ```
 
-所以 GitHub 不只是「放 Code 的地方」。
-
-它也可以成為整套團隊開發流程的中心。
+所以 GitHub 不只是「放 Code 的地方」。它也可以成為整套團隊開發流程的中心。做專案管理、城市管理、自動化測試、CI/CD、部署等等。
 
 ## PR 的三種 Merge 方法
 
@@ -1645,13 +1635,7 @@ git commit -m "fix: handle invalid login"
 git push
 ```
 
-同一條 Branch Push 新 Commit 之後，原本的 PR 會自動更新。
-
-不用重開。
-
-最後 Merge。
-
-本機回來：
+同一條 Branch Push 新 Commit 之後，原本的 PR 會自動更新，不用重開。最後 Merge。
 
 ```bash
 git switch main
@@ -1733,11 +1717,7 @@ Remote 有沒有？
 
 只要這張地圖有建立起來，指令忘記都查得到。
 
-如果這張地圖不存在，背一百條指令也只是在施法。
-
-## 最後
-
-最後想講一件比較不像 Git 教學的事情。
+## 總結
 
 我們今天一直在打：
 
@@ -1747,21 +1727,9 @@ git commit
 git push
 ```
 
-看起來都是很冷冰冰的指令。
+看起來都是很冷冰冰的指令。但真的開始接觸開源軟體之後，當你打開一個大型 Repository。裡面可能有幾十萬行 Code、數千個 Commit、幾百、幾千位 Contributor。
 
-但真的開始接觸開源軟體之後，你會慢慢發現一件很有趣的事情。
-
-你今天打開一個大型 Repository。
-
-裡面可能有幾十萬行 Code。
-
-數千個 Commit。
-
-幾百、幾千位 Contributor。
-
-它不是某個人某一天坐下來，一口氣把所有東西寫完的。
-
-而是在很多年的時間裡，一群可能從來沒見過彼此的人，一點一點把東西留下來。
+它不是某個人某一天坐下來，一口氣把所有東西寫完的。而是在很多年的時間裡，一群可能從來沒見過彼此的人，一點一點把東西留下來。
 
 有人修了一個 Typo。
 
@@ -1793,49 +1761,9 @@ Git 自己也是這樣。
 
 我們每天在使用的大量 Library、Framework、編輯器、伺服器軟體，也都是這樣。
 
-所以 Git 最厲害的地方，也許從來不只是可以回到昨天的版本。
+所以 Git 最厲害的地方，也許從來不只是可以回到昨天的版本。而是它讓很多彼此不認識的人，可以把自己的工作接在另一個人的工作後面。
 
-而是它讓很多彼此不認識的人，可以把自己的工作接在另一個人的工作後面。
-
-讓修改有歷史。
-
-讓貢獻有紀錄。
-
-讓一個人完成不了的東西，可以由很多人一起完成。
-
-今天你第一次：
-
-```bash
-git clone
-```
-
-可能只是下載課堂範例。
-
-第一次：
-
-```bash
-git commit
-```
-
-可能只是新增一句：
-
-```text
-Hello Git!
-```
-
-但那些今天看起來巨大得不可思議的開源專案，本質上也是這樣長出來的。
-
-一個 Commit。
-
-再下一個 Commit。
-
-有人寫第一行。
-
-有人改第二行。
-
-有人修第三行。
-
-很多年之後，我們才有今天這些工具可以使用。
+讓修改有歷史。讓貢獻有紀錄。讓一個人完成不了的東西，可以由很多人一起完成。
 
 所以哪一天，如果你也看到一個 Bug。
 
@@ -1845,26 +1773,6 @@ Hello Git!
 
 > 欸，這個我好像可以改。
 
-那就試試看。
-
-Fork 它。
-
-開一條 Branch。
-
-改掉它。
-
-Commit。
-
-Push。
-
-開一個 Pull Request。
+那就試試看、Fork 它、開一條 Branch、Commit、Push、開一個 Pull Request。
 
 因為所有很大的開源專案，最後其實都是這樣長大的。
-
-一個人留下一點。
-
-下一個人，再留下一點。
-
-而下一個 Commit，
-
-也許就是你的。
