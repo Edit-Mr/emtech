@@ -60,7 +60,7 @@
 				{
 					"name": "Yuan",
 					"url": "https://yuan-tw.net/",
-					"image": "yuan.jfif",
+					"image": "yuan.webp",
 					"description": "網路技術愛好者與工程師"
 				},
 				{
@@ -98,6 +98,12 @@
 					"url": "https://blog.houman.top/",
 					"image": "leidun.webp",
 					"description": "他睡觉时真的不打雷"
+				},
+				{
+					"name": "毛窝",
+					"url": "https://samhacker.xyz/",
+					"image": "https://gravatar.com/avatar/f7598bd8d4aba38d7219341f81a162fc842376b3b556b1995cbb97271d9e2915?&size=128",
+					"description": "发现毛毛们在互联网上的小角落"
 				},
 				{
 					"name": "SamHacker",
