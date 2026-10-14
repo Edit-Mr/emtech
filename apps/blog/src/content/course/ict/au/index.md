@@ -4,6 +4,7 @@ tags: []
 categories: [基礎教學]
 date: 2026-09-20
 description: "這堂課將介紹 Podcast 錄音的基礎知識，包括麥克風、錄音介面、線材與後製軟體的使用。"
+draft: true
 ---
 
 # Podcast 錄音入門：從麥克風到 Adobe Audition 後製
