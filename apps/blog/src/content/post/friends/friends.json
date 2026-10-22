@@ -10,22 +10,10 @@
 					"description": "數位創作者，全端工程師"
 				},
 				{
-					"name": "Wolf Yuan",
-					"url": "https://wolf-yuan.dev/",
-					"image": "wolf-yuan.webp",
-					"description": "Furry Developer"
-				},
-				{
 					"name": "Each Chen",
 					"url": "https://www.iach.cc/",
 					"image": "https://gravatar.com/avatar/17e00664ef815abebb952dc4f449e1f1582d0fe0b94c6701e368d68349e151e6?&size=256",
 					"description": "網路技術愛好者與工程師"
-				},
-				{
-					"name": "颉文",
-					"url": "https://shellwen.com/",
-					"image": "shellwen.webp",
-					"description": "一只会写代码的小棕熊"
 				},
 				{
 					"name": "OsGa",
@@ -82,6 +70,35 @@
 					"description": "據說這隻柴犬叼著毛哥的 SSD 從臺北跑到臺中"
 				},
 				{
+					"name": "雷顿",
+					"url": "https://blog.houman.top/",
+					"image": "leidun.webp",
+					"description": "他睡觉时真的不打雷"
+				},
+				{
+					"name": "SamHacker",
+					"url": "https://samhacker.xyz/",
+					"image": "https://gravatar.com/avatar/f7598bd8d4aba38d7219341f81a162fc842376b3b556b1995cbb97271d9e2915?&size=128",
+					"description": "把 GitHub 當垃圾桶的高中牲"
+				}
+			]
+		},
+		{
+			"title": "毛毛",
+			"friends": [
+				{
+					"name": "Wolf Yuan",
+					"url": "https://wolf-yuan.dev/",
+					"image": "wolf-yuan.webp",
+					"description": "Furry Developer"
+				},
+				{
+					"name": "颉文",
+					"url": "https://shellwen.com/",
+					"image": "shellwen.webp",
+					"description": "一只会写代码的小棕熊"
+				},
+				{
 					"name": "GlassFoxowo's Notebook",
 					"url": "https://note.glassfoxowo.com/",
 					"image": "glassfoxowo.webp",
@@ -94,22 +111,16 @@
 					"description": "一隻喜歡玩電腦的龍"
 				},
 				{
-					"name": "雷顿",
-					"url": "https://blog.houman.top/",
-					"image": "leidun.webp",
-					"description": "他睡觉时真的不打雷"
-				},
-				{
 					"name": "毛窝",
 					"url": "https://samhacker.xyz/",
 					"image": "https://gravatar.com/avatar/f7598bd8d4aba38d7219341f81a162fc842376b3b556b1995cbb97271d9e2915?&size=128",
 					"description": "发现毛毛们在互联网上的小角落"
 				},
 				{
-					"name": "SamHacker",
-					"url": "https://samhacker.xyz/",
-					"image": "https://gravatar.com/avatar/f7598bd8d4aba38d7219341f81a162fc842376b3b556b1995cbb97271d9e2915?&size=128",
-					"description": "把 GitHub 當垃圾桶的高中牲"
+					"name": "早桔薄荷",
+					"url": "https://orange-mint.com/",
+					"image": "orange-mint.webp",
+					"description": "Speed of Light"
 				}
 			]
 		},
